@@ -27,6 +27,10 @@ void print_neighbors(const vector<vector<int>>& neighbors) {
 
 int main() {
     string line;
+    if (!infile.is_open()) {
+        cerr << "Error opening CubicATsemiregAut.txt." << endl;
+        return 1;
+    }
     for (int graph_i = 0; 1; graph_i++) {
         getline(infile, line);
         if (line.empty()) {
@@ -72,6 +76,8 @@ int main() {
         if (graph_i % 100 == 0 && graph_i > 0 && graph == dense_check_graph && graph == sparse_check_graph)
             cout << "All identical up to graph_i = " << graph_i << endl;
     }
+
+    infile.close();
 
     return 0;
 }
