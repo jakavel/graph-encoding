@@ -31,7 +31,13 @@ int main() {
         cerr << "Error opening CubicATsemiregAut.txt." << endl;
         return 1;
     }
-    for (int graph_i = 0; 1; graph_i++) {
+    ofstream outfile("compression_test.csv");
+    if (!outfile.is_open()) {
+        cerr << "Error opening compression_test.csv." << endl;
+        return 1;
+    }
+    outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl;
+    for (int graph_i = 0; graph_i <= 2000; graph_i++) {
         getline(infile, line);
         if (line.empty()) {
             cout << "End of file reached, graph_i = " << graph_i << endl;
@@ -56,27 +62,19 @@ int main() {
                 automorphisms[i].push_back(x);
             }
         }
-        vector<int> automorphism = automorphisms[0];
 
-        Graph dense_check_graph = decode(graph.encode(automorphism, false));
-        Graph sparse_check_graph = decode(graph.encode(automorphism, true));
-        vector<vector<int>> cyclic_decomposition = get_cyclic_decomposition(automorphism);
-        vector<int> isomorphism;
-        for (vector<int> cycle : cyclic_decomposition) {
-            isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
+        for (const vector<int>& automorphism : automorphisms) {
+            outfile << graph_i << "," << graph.n() << "," << graph.m() << "," << get_cyclic_decomposition(automorphism).size() << ","
+                    << graph.simple_encode().length() << ","
+                    << graph.encode(automorphism, false).length() << ","
+                    << graph.encode(automorphism, true).length() << endl;
         }
-
-        dense_check_graph.apply_morphism(isomorphism);
-        sparse_check_graph.apply_morphism(isomorphism);
-
-        if (graph != dense_check_graph)
-            cout << "Dense is NOT identical, graph_i = " << graph_i << endl;
-        if (graph != sparse_check_graph)
-            cout << "Sparse is NOT identical, graph_i = " << graph_i << endl;
-        if (graph_i % 100 == 0 && graph_i > 0 && graph == dense_check_graph && graph == sparse_check_graph)
-            cout << "All identical up to graph_i = " << graph_i << endl;
+        if (graph_i % 100 == 0 && graph_i > 0) {
+            cout << "Processed graph " << graph_i  << endl;
+        }
     }
 
+    outfile.close();
     infile.close();
 
     return 0;
