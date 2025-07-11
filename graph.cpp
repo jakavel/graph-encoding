@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "permutation.h"
 #include <string>
 #include <vector>
 #include <sstream>
@@ -120,28 +121,8 @@ std::string Graph::encode_sparse_adjacency(const std::vector<std::vector<int>>& 
     return out;
 }
 
-std::vector<std::vector<int>> get_cyclic_decomposition(const std::vector<int>& permutation) {
-    int n = permutation.size();
-    std::vector<bool> visited(n + 1, false);
-    std::vector<std::vector<int>> decomposition;
-
-    for (int i = 1; i <= n; i++) {
-        if (!visited[i]) {
-            std::vector<int> cycle;
-            int current = i;
-            do {
-                visited[current] = true;
-                cycle.push_back(current);
-                current = permutation[current - 1]; // permutation is 0-based, but we use 1-based indexing
-            } while (current != i);
-            decomposition.push_back(cycle);
-        }
-    }
-    return decomposition;
-}
-
-std::string Graph::encode(const std::vector<int>& automorphism, bool sparse) const {
-    std::vector<std::vector<int>> cyclic_decomposition = get_cyclic_decomposition(automorphism);
+std::string Graph::encode(const Permutation& automorphism, bool sparse) const {
+    std::vector<std::vector<int>> cyclic_decomposition = automorphism.cyclic_decomposition();
     std::string out = std::to_string(n()) + ":" + std::to_string(cyclic_decomposition.size()) + ":";
     if (sparse)
         out += "s:";
@@ -261,45 +242,25 @@ Graph decode(const std::string& encoded) {
     return neighbors;
 }
 
-/**
- * Computes the inverse of a permutation.
- * @param permutation A vector of integers representing the permutation.
- * @return A vector of integers representing the inverse permutation.
- */
-std::vector<int> inverse(const std::vector<int>& permutation) {
-    int n = permutation.size();
-    std::vector<int> inv(n);
-    for (int i = 0; i < n; i++) {
-        inv[permutation[i] - 1] = i + 1; // permutation is 1-based, so we adjust accordingly
-    }
-    return inv;
-}
-
-void Graph::apply_morphism(const std::vector<int>& morphism) {
-    for (int x : morphism) {
-        assert(x >= 1 && x <= n());
-    }
-    std::vector<int> inv_morphism = inverse(morphism);
+void Graph::apply_morphism(const Permutation& morphism) {
+    Permutation inv_morphism = morphism.inverse();
     std::set<int> visited;
     // Permute the outer vector of the neighbors list according to the morphism.
     for (int i = 1; i <= n(); i++) {
         // (1 2)(2 3)(3 4) = (1 4 3 2) = (1 2 3 4)^(-1)
-        while (visited.count(i) == 0 && inv_morphism[i-1] != i) {
-            std::swap(m_neighbors[i], m_neighbors[inv_morphism[i-1]]);
+        while (visited.count(i) == 0 && inv_morphism.apply(i) != i) {
+            std::swap(m_neighbors[i], m_neighbors[inv_morphism.apply(i)]);
             visited.insert(i);
-            i = inv_morphism[i-1]; // move to the next vertex in the cycle
-            if (visited.count(inv_morphism[i-1]) > 0) {
+            i = inv_morphism.apply(i); // move to the next vertex in the cycle
+            if (visited.count(inv_morphism.apply(i)) > 0) {
                 visited.insert(i);
-                i = inv_morphism[i-1]; // move back to the start of the cycle
+                i = inv_morphism.apply(i); // move back to the start of the cycle
                 break;
             }
         }
     }
     // Apply the morphism to the neighbors of each node.
     for (int i = 1; i <= n(); i++) {
-        for (size_t j = 0; j < m_neighbors[i].size(); j++) {
-            // apply the morphism to the neighbors
-            m_neighbors[i][j] = morphism[m_neighbors[i][j]-1];
-        }
+        morphism.apply(&(m_neighbors[i]));
     }
 }

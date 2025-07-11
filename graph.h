@@ -1,5 +1,6 @@
 #pragma once
 
+#include "permutation.h"
 #include <vector>
 #include <string>
 
@@ -58,14 +59,13 @@ public:
      * @return A string representation of the graph in the form
      *         "n:k:d/s:...".
      */
-    std::string encode(const std::vector<int>& automorphism, bool sparse) const;
-    // TODO: make morphisms use 1-based indexing
+    std::string encode(const Permutation& automorphism, bool sparse) const;
     /**
      * Applies the given morphism to the graph, modifying it in place.
      * @param morphism A vector of integers representing the morphism to apply.
      *                 The i-th element of the vector is the new index for the i-th node.
      */
-    void apply_morphism(const std::vector<int>& morphism);
+    void apply_morphism(const Permutation& morphism);
 
 private:
     std::vector<std::vector<int>> m_neighbors;

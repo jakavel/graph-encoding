@@ -1,4 +1,5 @@
-#include "Graph.h"
+#include "graph.h"
+#include "permutation.h"
 #include <iostream>
 #include <stdio.h>
 #include <string>
@@ -31,12 +32,12 @@ int main() {
         cerr << "Error opening CubicATsemiregAut.txt." << endl;
         return 1;
     }
-    ofstream outfile("compression_test.csv");
+    /* ofstream outfile("compression_test.csv");
     if (!outfile.is_open()) {
         cerr << "Error opening compression_test.csv." << endl;
         return 1;
     }
-    outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl;
+    outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl; */
     for (int graph_i = 0; graph_i <= 2000; graph_i++) {
         getline(infile, line);
         if (line.empty()) {
@@ -51,30 +52,44 @@ int main() {
         assert(n == n2);
         Graph graph = simple_decode(line);
 
-        vector<vector<int>> automorphisms(n_of_automorphisms);
+        vector<Permutation> automorphisms;
         for (int i = 0; i < n_of_automorphisms; i++) {
             getline(infile, line);
             replace(line.begin(), line.end(), ',', ' ');
             istringstream iss(line);
+            vector<int> perm;
             for (int j = 0; j < n; j++) {
                 int x;
                 iss >> x;
-                automorphisms[i].push_back(x);
+                perm.push_back(x);
             }
+            automorphisms.push_back(Permutation(perm));
         }
 
-        for (const vector<int>& automorphism : automorphisms) {
-            outfile << graph_i << "," << graph.n() << "," << graph.m() << "," << get_cyclic_decomposition(automorphism).size() << ","
+        vector<int> isomorphism;
+        for (vector<int>& cycle : automorphisms[0].cyclic_decomposition()) {
+            isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
+        }
+        Permutation isomorphism_perm(isomorphism);
+        Graph new_graph_1 = decode(graph.encode(automorphisms[0], false));
+        Graph new_graph_2 = decode(graph.encode(automorphisms[0], true));
+        new_graph_1.apply_morphism(isomorphism_perm);
+        new_graph_2.apply_morphism(isomorphism_perm);
+        assert(graph == new_graph_1);
+        assert(graph == new_graph_2);
+
+        /* for (const Permutation& automorphism : automorphisms) {
+            outfile << graph_i << "," << graph.n() << "," << graph.m() << "," << automorphism.cyclic_decomposition().size() << ","
                     << graph.simple_encode().length() << ","
                     << graph.encode(automorphism, false).length() << ","
                     << graph.encode(automorphism, true).length() << endl;
-        }
+        } */
         if (graph_i % 100 == 0 && graph_i > 0) {
             cout << "Processed graph " << graph_i  << endl;
         }
     }
 
-    outfile.close();
+    // outfile.close();
     infile.close();
 
     return 0;
