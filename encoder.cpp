@@ -38,7 +38,7 @@ int main() {
         return 1;
     }
     outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl; */
-    for (int graph_i = 0; graph_i <= 2000; graph_i++) {
+    for (int graph_i = 0; graph_i <= 800; graph_i++) {
         getline(infile, line);
         if (line.empty()) {
             cout << "End of file reached, graph_i = " << graph_i << endl;

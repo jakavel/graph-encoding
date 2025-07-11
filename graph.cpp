@@ -30,7 +30,17 @@ std::string Graph::simple_encode() const {
     return out;
 }
 
-// TODO: use process_comma_semicolon here.
+/**
+ * Process a substring of integers separated by commas and ending with a semicolon.
+ * Example input: "11,17,3,43;"
+ * @param input The input string containing the substring with integers.
+ * @param position The starting position in the input substring.
+ * @param output A set pointer to store the processed integers.
+ * @return The position in the input string the semicolon at the end of the 
+ *         processed substring.
+ */
+int process_comma_semicolon(const std::string& input, size_t position, std::vector<int>* output);
+
 Graph simple_decode(const std::string& encoded) {
     std::vector<std::vector<int>> neighbors;
     int n; // number of vertices
@@ -38,16 +48,7 @@ Graph simple_decode(const std::string& encoded) {
     neighbors.resize(n + 1); // padded to use 1-based indexing
     int spos = encoded.find(":") + 1; // position in string
     for (int i = 1; i <= n; i++) {
-        int next_semicolon = encoded.find(";", spos);
-        std::string neighbors_str = encoded.substr(spos, next_semicolon - spos);
-        // replace commas with spaces so istringstream can parse it
-        std::replace(neighbors_str.begin(), neighbors_str.end(), ',', ' ');
-        std::istringstream iss(neighbors_str);
-        int neighbor;
-        while (iss >> neighbor) {
-            neighbors[i].push_back(neighbor);
-        }
-        spos = next_semicolon + 1;
+        spos = process_comma_semicolon(encoded, spos, &neighbors[i]);
     }
     return Graph(neighbors);
 }
@@ -137,22 +138,14 @@ std::string Graph::encode(const Permutation& automorphism, bool sparse) const {
     return out;
 }
 
-/**
- * Process a substring of integers separated by commas and ending with a semicolon.
- * Example input: "11,17,3,43;"
- * @param input The input string containing the substring with integers.
- * @param position The starting position in the input substring.
- * @param output A set pointer to store the processed integers.
- * @return The position in the input string the semicolon at the end of the 
- *         processed substring.
- */
-int process_comma_semicolon(const std::string& input, size_t position, std::set<int>* output) {
+// Function documentation is above the forward declaration.
+int process_comma_semicolon(const std::string& input, size_t position, std::vector<int>* output) {
     if (input[position] == ';')
         return position + 1; // No numbers to process
     while (1) {
         int value;
         sscanf(input.c_str() + position, "%d", &value);
-        output->insert(value);
+        output->push_back(value);
         size_t next_comma = input.find(",", position);
         size_t next_semicolon = input.find(";", position);
         if (next_comma == std::string::npos) position = next_semicolon + 1;
@@ -192,7 +185,7 @@ Graph decode(const std::string& encoded) {
         spos = encoded.find(":d:") + 3;
     }
 
-    std::vector<std::vector<std::set<int>>> deltas_matrix(n + 1);
+    std::vector<std::vector<std::vector<int>>> deltas_matrix(n + 1);
     for (int i = 1; i <= n; i++) {
         deltas_matrix[i].resize(n + 1);
     }
