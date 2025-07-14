@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 class Permutation {
 public:
@@ -36,6 +37,11 @@ public:
      * @return A vector of vectors, where each inner vector represents a cycle in the permutation.
      */
     std::vector<std::vector<int>> cyclic_decomposition() const;
+    /**
+     * Encodes the permutation as a human-readable string.
+     * @return A string representation of the cyclic decomposition.
+     */
+    std::string cyclic_decomposition_string() const;
 
 private:
     std::vector<int> m_perm;

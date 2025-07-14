@@ -1,5 +1,6 @@
 #include "permutation.h"
 #include <cassert>
+#include <string>
 
 Permutation::Permutation(std::vector<int> perm) : m_perm(std::move(perm)) {
     for (int x : m_perm) {
@@ -48,4 +49,18 @@ std::vector<std::vector<int>> Permutation::cyclic_decomposition() const {
         }
     }
     return decomposition;
+}
+
+std::string Permutation::cyclic_decomposition_string() const {
+    std::string out;
+    auto decomposition = cyclic_decomposition();
+    for (const auto& cycle : decomposition) {
+        out += "(";
+        for (size_t i = 0; i < cycle.size(); i++) {
+            if (i > 0) out += ",";
+            out += std::to_string(cycle[i]);
+        }
+        out += ")";
+    }
+    return out;
 }
