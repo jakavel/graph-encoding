@@ -1,6 +1,7 @@
 #include "binary_to_string.h"
 #include <string>
 #include <cassert>
+#include <vector>
 
 char charify(int n) {
     n = n % 64;
@@ -35,4 +36,40 @@ std::string string_N(int n) {
         s[7] = charify(n);
         return s;
     }
+}
+
+int log_2_ceil(int n) {
+    assert(n > 0);
+    int log = 0;
+    while ((1 << log) <= n) {
+        log++;
+    }
+    return log;
+}
+
+std::vector<bool> array_to_bits(int k, const std::vector<int>& array) {
+    assert(k > 0);
+    std::vector<bool> bits;
+    bits.reserve(k * array.size());
+    for (int x : array) {
+        assert(x >= 0 && (x >> k) == 0); // x must fit in k bits
+        for (int i = k - 1; i >= 0; i--) {
+            bits.push_back(x & (1 << i));
+        }
+    }
+    return bits;
+}
+
+std::string bits_to_string(const std::vector<bool>& bits) {
+    assert(bits.size() % 6 == 0);
+    std::string out;
+    out.reserve(bits.size() / 6);
+    for (size_t i = 0; i < bits.size(); i += 6) {
+        int n = 0;
+        for (int j = 0; j < 6; j++) {
+            n |= (bits[i + j] << (5 - j));
+        }
+        out += char(n + 63);
+    }
+    return out;
 }

@@ -1,5 +1,6 @@
 #include "permutation.h"
 #include <cassert>
+#include <algorithm>
 #include <string>
 
 Permutation::Permutation(std::vector<int> perm) : m_perm(std::move(perm)) {
@@ -34,19 +35,36 @@ Permutation Permutation::inverse() const {
 
 std::vector<std::vector<int>> Permutation::cyclic_decomposition() const {
     std::vector<bool> visited(n() + 1, false);
+    std::vector<std::tuple<int, int>> cycles; // (length, start)
     std::vector<std::vector<int>> decomposition;
 
     for (int i = 1; i <= n(); i++) {
         if (!visited[i]) {
-            std::vector<int> cycle;
             int current = i;
+            int length = 0;
             do {
                 visited[current] = true;
-                cycle.push_back(current);
+                length++;
                 current = apply(current);
             } while (current != i);
-            decomposition.push_back(cycle);
+            cycles.emplace_back(length, i);
         }
+    }
+    // Sort cycles by length (descending) and then by starting (minimum) point (ascending)
+    auto compare = [](const std::tuple<int, int>& a, const std::tuple<int, int>& b) {
+        return std::get<0>(a) > std::get<0>(b) || (std::get<0>(a) == std::get<0>(b) && std::get<1>(a) < std::get<1>(b));
+    };
+    std::sort(cycles.begin(), cycles.end(), compare);
+    for (const auto& cycle : cycles) {
+        int start = std::get<1>(cycle);
+        std::vector<int> current_cycle;
+        current_cycle.reserve(std::get<0>(cycle));
+        int current = start;
+        do {
+            current_cycle.push_back(current);
+            current = apply(current);
+        } while (current != start);
+        decomposition.push_back(current_cycle);
     }
     return decomposition;
 }

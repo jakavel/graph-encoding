@@ -1,5 +1,6 @@
 #include "graph.h"
 #include "permutation.h"
+#include "binary_to_string.h"
 #include <iostream>
 #include <stdio.h>
 #include <string>
@@ -11,7 +12,7 @@
 #include <set>
 using namespace std;
 
-ifstream infile("CubicATAutsmall.txt");
+ifstream infile("CubicATAut.txt");
 
 void print_neighbors(const vector<vector<int>>& neighbors) {
     // prints the neighbors of the graph
@@ -29,7 +30,7 @@ void print_neighbors(const vector<vector<int>>& neighbors) {
 int main() {
     string line;
     if (!infile.is_open()) {
-        cerr << "Error opening CubicATAutsmall.txt." << endl;
+        cerr << "Error opening CubicATAut.txt." << endl;
         return 1;
     }
     /* ofstream outfile("compression_test.csv");
@@ -39,8 +40,7 @@ int main() {
     }
     outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl; */
     for (int graph_i = 0; graph_i <= 800; graph_i++) {
-        getline(infile, line);
-        if (infile.eof()) {
+        if (!getline(infile, line)) {
             cout << "End of file reached, read " << graph_i << " graphs" << endl;
             break; // end of file
         }
@@ -51,7 +51,6 @@ int main() {
         int n2; sscanf(line.c_str(), "%d", &n2);
         assert(n == n2);
         Graph graph = simple_decode(line);
-        cout << graph_i << " has size " << n << endl;
 
         vector<Permutation> automorphisms;
         automorphisms.reserve(n_of_automorphisms);
@@ -75,28 +74,19 @@ int main() {
                 isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
             }
             Permutation isomorphism_perm(isomorphism);
-            Graph new_graph_1 = decode(graph.encode(automorphism, false));
-            Graph new_graph_2 = decode(graph.encode(automorphism, true));
-            new_graph_1.apply_morphism(isomorphism_perm);
-            new_graph_2.apply_morphism(isomorphism_perm);
-            if (graph != new_graph_1) {
-                cout << "Graph mismatch with dense encoding!" << endl;
-                cout << graph.encode(automorphism, false) << endl;
-                cout << automorphism.cyclic_decomposition_string() << endl;
-                cout << "Original graph neighbors:" << endl;
-                print_neighbors(graph.neighbors());
-                cout << "New graph 1 neighbors:" << endl;
-                print_neighbors(new_graph_1.neighbors());
-            }
-            else if (graph != new_graph_2) {
+            Graph new_graph = decode(graph.encode(automorphism, true));
+            new_graph.apply_morphism(isomorphism_perm);
+            if (graph != new_graph) {
                 cout << "Graph mismatch with sparse encoding!" << endl;
+                cout << "Graph neighbors:" << endl;
+                cout << "n=" << graph.n() << ", automorphism=" << automorphism.cyclic_decomposition_string() << endl;
                 cout << "Original graph neighbors:" << endl;
                 print_neighbors(graph.neighbors());
-                cout << "New graph 2 neighbors:" << endl;
-                print_neighbors(new_graph_2.neighbors());
+                cout << "New graph neighbors:" << endl;
+                print_neighbors(new_graph.neighbors());
+                return 1;
             }
-            assert(graph == new_graph_1);
-            assert(graph == new_graph_2);
+            assert(graph == new_graph);
         }
         if (graph_i % 100 == 0 && graph_i > 0) {
             cout << "Processed graph " << graph_i  << endl;
