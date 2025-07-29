@@ -119,6 +119,12 @@ std::string Graph::encode_sparse_adjacency(const std::vector<std::vector<int>>& 
                 }
                 target_i++;
             }
+            // The sparse adjacency representation is a sequence of bits
+            // f_0 x_0 f_1 x_1 ..., where f_i is a bit, and if
+            // f_i = 0, then x_i is b_k bits long, where b_k = log_2_ceil(# of cycles in automorphism)
+            // If x_i > v then update v to x_i, otherwise select the edge (v, x_i).
+            // f_i = 1, then x_i is b_ij bits long, where b_ij = log_2_ceil(gcd(size of cycle i, size of cycle j)),
+            // and (i, j) is the selected edge. x_i is then a delta of this edge in the quotient graph.
             if (!deltas.empty()) {
                 if (v != i) {
                     // move the current position to the source cycle
@@ -143,6 +149,8 @@ std::string Graph::encode_sparse_adjacency(const std::vector<std::vector<int>>& 
             }
         }
     }
+    // We can always pad with 0 because f_i = 0 and x_i = 0 is not a valid
+    // instruction since vertices are in the range [1, k].
     if (edges_bits.size() % 6 != 0) {
         int padding = 6 - (edges_bits.size() % 6);
         edges_bits.resize(edges_bits.size() + padding, false);
@@ -175,6 +183,11 @@ std::string Graph::encode(const Permutation& automorphism, bool sparse) const {
         }
     }
     assert((int) cycle_sizes.size() == multi_cycles + single_cycles);
+    // The cycle sizes are encoded as follows:
+    // Store "f_0, c_0, f_1, c_1, ..., 0, d_0, d_1, d_2, ..., 0",
+    // where each number is b_n = log_2_ceil(n) bits long. A pairs (f_i, c_i)
+    // means that there are f_i cycles with length c_i, 
+    // while d_i means that there is a single cycle of length d_i.
     int b_n = log_2_ceil(n());
     std::vector<int> cycle_sizes_encoded;
     cycle_sizes_encoded.reserve(2 + 2 * multi_cycles + single_cycles);
