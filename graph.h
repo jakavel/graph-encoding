@@ -3,6 +3,7 @@
 #include "permutation.h"
 #include <vector>
 #include <string>
+#include <gtools.h>
 
 class Graph {
 public:
@@ -66,6 +67,11 @@ public:
      *                 The i-th element of the vector is the new index for the i-th node.
      */
     void apply_morphism(const Permutation& morphism);
+    /**
+     * Converts the graph to the sparsegraph type from gtools / nauty.
+     * @return A sparsegraph representation of the graph.
+     */
+    sparsegraph to_sparsegraph() const;
 
 private:
     std::vector<std::vector<int>> m_neighbors;

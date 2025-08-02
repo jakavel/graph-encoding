@@ -8,6 +8,7 @@
 #include <cassert>
 #include <set>
 #include <numeric>
+#include <gtools.h>
 
 Graph::Graph(std::vector<std::vector<int>> neighbors)
     : m_neighbors{std::move(neighbors)} {
@@ -448,4 +449,28 @@ void Graph::apply_morphism(const Permutation& morphism) {
     for (int i = 1; i <= n(); i++) {
         morphism.apply(&(m_neighbors[i]));
     }
+}
+
+sparsegraph Graph::to_sparsegraph() const {
+    sparsegraph sg;
+    sg.nv = n();
+    sg.nde = 2 * m();
+    sg.v = (size_t*) malloc(sg.nv * sizeof(size_t));
+    sg.d = (int*) malloc(sg.nv * sizeof(int));
+    sg.e = (int*) malloc(sg.nde * sizeof(int));
+    sg.w = NULL;
+    sg.vlen = sg.nv;
+    sg.dlen = sg.nv;
+    sg.elen = sg.nde;
+    sg.wlen = 0;
+    size_t epos = 0;
+    for (int i = 1; i <= n(); i++) {
+        sg.v[i - 1] = epos;
+        sg.d[i - 1] = m_neighbors[i].size();
+        for (int j : m_neighbors[i]) {
+            sg.e[epos++] = j - 1; // Convert to 0-based indexing
+        }
+    }
+    assert(epos == sg.nde);
+    return sg;
 }

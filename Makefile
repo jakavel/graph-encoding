@@ -1,5 +1,7 @@
+NAUTY_LIB := ./nauty.a
+
 encoder.exe: encoder.o graph.o binary_to_string.o permutation.o
-	g++ -Wall encoder.o graph.o binary_to_string.o permutation.o -o encoder.exe
+	g++ -Wall encoder.o graph.o binary_to_string.o permutation.o $(NAUTY_LIB) -o encoder.exe
 
 permutation.o: permutation.cpp permutation.h
 	g++ -Wall -c permutation.cpp

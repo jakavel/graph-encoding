@@ -10,9 +10,11 @@
 #include <cassert>
 #include <algorithm>
 #include <set>
+#include <gtools.h>
 using namespace std;
 
 ifstream infile("CubicATAut.txt");
+FILE *s6_graphs_file;
 
 void print_neighbors(const vector<vector<int>>& neighbors) {
     // prints the neighbors of the graph
@@ -27,19 +29,31 @@ void print_neighbors(const vector<vector<int>>& neighbors) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     string line;
     if (!infile.is_open()) {
         cerr << "Error opening CubicATAut.txt." << endl;
         return 1;
     }
-    /* ofstream outfile("compression_test.csv");
-    if (!outfile.is_open()) {
-        cerr << "Error opening compression_test.csv." << endl;
+    s6_graphs_file = fopen("s6_graphs.txt", "w");
+    if (!s6_graphs_file) {
+        cerr << "Error opening s6_graphs.txt." << endl;
         return 1;
     }
-    outfile << "graph_i,num_vertices,num_edges,num_orbits,simple_encoding_length,dense_encoding_length,sparse_encoding_length" << endl; */
-    for (int graph_i = 0; graph_i <= 800; graph_i++) {
+    ofstream outfile("enc_graphs.txt");
+    if (!outfile.is_open()) {
+        cerr << "Error opening enc_graphs.txt." << endl;
+        return 1;
+    }
+    int max_graph = 1000;
+    if (argc > 1) {
+        max_graph = atoi(argv[1]);
+        if (max_graph <= 0) {
+            cerr << "Invalid maximum graph number specified." << endl;
+            return 1;
+        }
+    }
+    for (int graph_i = 0; graph_i <= max_graph; graph_i++) {
         if (!getline(infile, line)) {
             cout << "End of file reached, read " << graph_i << " graphs" << endl;
             break; // end of file
@@ -68,7 +82,7 @@ int main() {
         }
 
         for (const Permutation& automorphism : automorphisms) {
-            vector<int> isomorphism;
+            /* vector<int> isomorphism;
             isomorphism.reserve(n);
             for (vector<int>& cycle : automorphism.cyclic_decomposition()) {
                 isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
@@ -86,15 +100,23 @@ int main() {
                 print_neighbors(new_graph.neighbors());
                 return 1;
             }
-            assert(graph == new_graph);
+            assert(graph == new_graph); */
+            outfile << graph.encode(automorphism, true) << endl;
+            sparsegraph s6_graph = graph.to_sparsegraph();
+            writes6_sg(s6_graphs_file, &s6_graph);
+            free(s6_graph.v);
+            free(s6_graph.d);
+            free(s6_graph.e);
+
         }
         if (graph_i % 100 == 0 && graph_i > 0) {
             cout << "Processed graph " << graph_i  << endl;
         }
     }
 
-    // outfile.close();
+    outfile.close();
     infile.close();
-
+    fclose(s6_graphs_file);
+    cout << "All graphs processed successfully." << endl;
     return 0;
 }
