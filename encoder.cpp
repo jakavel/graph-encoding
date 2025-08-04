@@ -35,14 +35,14 @@ int main(int argc, char *argv[]) {
         cerr << "Error opening CubicATAut.txt." << endl;
         return 1;
     }
-    s6_graphs_file = fopen("s6_graphs.txt", "w");
+    s6_graphs_file = fopen("s6_graphs.csv", "w");
     if (!s6_graphs_file) {
-        cerr << "Error opening s6_graphs.txt." << endl;
+        cerr << "Error opening s6_graphs.csv." << endl;
         return 1;
     }
-    ofstream outfile("enc_graphs.txt");
+    ofstream outfile("enc_graphs.csv");
     if (!outfile.is_open()) {
-        cerr << "Error opening enc_graphs.txt." << endl;
+        cerr << "Error opening enc_graphs.csv." << endl;
         return 1;
     }
     int max_graph = 1000;
@@ -81,8 +81,9 @@ int main(int argc, char *argv[]) {
             automorphisms.push_back(Permutation(perm));
         }
 
-        for (const Permutation& automorphism : automorphisms) {
-            /* vector<int> isomorphism;
+        outfile << graph.n() << "," << graph.encode(automorphisms[0], true) << endl;
+        /* for (const Permutation& automorphism : automorphisms) {
+            vector<int> isomorphism;
             isomorphism.reserve(n);
             for (vector<int>& cycle : automorphism.cyclic_decomposition()) {
                 isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
@@ -100,15 +101,16 @@ int main(int argc, char *argv[]) {
                 print_neighbors(new_graph.neighbors());
                 return 1;
             }
-            assert(graph == new_graph); */
-            outfile << graph.encode(automorphism, true) << endl;
+            assert(graph == new_graph);
+            outfile << graph.n() << "," << graph.encode(automorphism, true) << endl;
             sparsegraph s6_graph = graph.to_sparsegraph();
+            fprintf(s6_graphs_file, "%d,", s6_graph.nv);
             writes6_sg(s6_graphs_file, &s6_graph);
             free(s6_graph.v);
             free(s6_graph.d);
             free(s6_graph.e);
 
-        }
+        } */
         if (graph_i % 100 == 0 && graph_i > 0) {
             cout << "Processed graph " << graph_i  << endl;
         }

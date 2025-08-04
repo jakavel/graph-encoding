@@ -365,7 +365,7 @@ Graph decode(const std::string& encoded) {
     int b_k = log_2_ceil(k);
     int v = 1;
     int u = -1;
-    int m, b_ij;
+    int m, b_ij = 1;
     while (1) {
         int b = read_k_bits(encoded, 1, pos);
         if (b == -1) break;
