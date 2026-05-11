@@ -3,7 +3,7 @@
 #include "permutation.h"
 #include <vector>
 #include <string>
-#include <gtools.h>
+#include "include/nauty/gtools.h"
 
 class Graph {
 public:

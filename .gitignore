@@ -44,3 +44,5 @@ CubicATsemiregAut.txt
 CubicATAutsmall.txt
 CubicATAut.txt
 .vscode
+symencode
+include/nauty/

@@ -9,7 +9,7 @@
 #include <cassert>
 #include <set>
 #include <numeric>
-#include <gtools.h>
+#include "include/nauty/gtools.h"
 
 Graph::Graph(std::vector<std::vector<int>> neighbors)
     : m_neighbors{std::move(neighbors)} {

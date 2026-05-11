@@ -10,7 +10,7 @@
 #include <cassert>
 #include <algorithm>
 #include <set>
-#include <gtools.h>
+#include "include/nauty/gtools.h"
 #include "include/clipp.h"
 
 std::ifstream input_file;

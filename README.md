@@ -1,6 +1,6 @@
 # Setup before compilation
-- Install Nauty and make sure the header file `gtools.h` is visible to the compiler.
-- Either copy `nauty.a` from nauty into the `graph-encoding/` folder or change the variable in the `Makefile` to it's location.
+- Install and build Nauty.
+- Copy the folder into `./include/` and rename it to `nauty` (or make a symbolic link).
 
 # Usage & description of procedure
 Can be found in symmetric\_graph\_encoding.pdf.

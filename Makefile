@@ -1,8 +1,8 @@
-NAUTY_LIB := ./include/nauty.a
+NAUTY_LIB := ./include/nauty/nauty.a
 C_FLAGS := -O3 -Wall
 
 encoder.exe: encoder.o graph.o binary_to_string.o permutation.o helpers.o
-	g++ $(C_FLAGS) encoder.o graph.o binary_to_string.o permutation.o helpers.o $(NAUTY_LIB) -o encoder.exe
+	g++ $(C_FLAGS) encoder.o graph.o binary_to_string.o permutation.o helpers.o $(NAUTY_LIB) -o symencode
 
 permutation.o: permutation.cpp permutation.h helpers.h
 	g++ $(C_FLAGS) -c permutation.cpp
