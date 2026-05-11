@@ -1,6 +1,7 @@
 #include "graph.h"
 #include "permutation.h"
 #include "binary_to_string.h"
+#include "helpers.h"
 #include <string>
 #include <vector>
 #include <sstream>
@@ -33,18 +34,6 @@ std::string Graph::simple_encode() const {
     return out;
 }
 
-/**
- * Process a substring of integers separated by commas and ending with a semicolon.
- * Example input: "11,17,3,43;"
- * @param input The input string containing the substring with integers.
- * @param position The starting position in the input substring.
- * @param terminator The character that marks the end of the substring (e.g., ';' or ':').
- * @param output A set pointer to store the processed integers.
- * @return The position in the input string the semicolon at the end of the 
- *         processed substring.
- */
-int process_csv(const std::string& input, size_t position, char terminator, std::vector<int>* output);
-
 Graph simple_decode(const std::string& encoded) {
     std::vector<std::vector<int>> neighbors;
     int n; // number of vertices
@@ -55,6 +44,71 @@ Graph simple_decode(const std::string& encoded) {
         spos = process_csv(encoded, spos, ';', &neighbors[i]);
     }
     return Graph(neighbors);
+}
+
+Graph graph_to_Graph(const graph& g, int m_wordsize, int n) {
+    std::vector<std::vector<int>> neighbors(n + 1); // padded to use 1-based indexing
+    for (int u = 0; u < n; u++) {
+        for (int v = u; v < n; v++) {
+            if (ISELEMENT(GRAPHROW(g, u, m_wordsize), v)) {
+                neighbors[u + 1].push_back(v + 1); // Convert to 1-based indexing
+                if (u != v) {
+                    neighbors[v + 1].push_back(u + 1);
+                }
+            }
+        }
+    }
+    return Graph(neighbors);
+}
+
+Graph nauty_decode_dense(const std::string& encoded) {
+    char* encoded_cstr = new char[encoded.size() + 1];
+    strcpy(encoded_cstr, encoded.c_str());
+    int n = graphsize(encoded_cstr);
+    DYNALLSTAT(graph,g,g_sz);
+    int m = SETWORDSNEEDED(n);
+    DYNALLOC2(graph,g,g_sz,m,n,"malloc");
+    stringtograph(encoded_cstr, g, m);
+    Graph graph1 = graph_to_Graph(*g, m, n);
+    DYNFREE(g, g_sz);
+    delete[] encoded_cstr;
+    return graph1;
+}
+
+Graph sparsegraph_to_Graph(const sparsegraph& sg) {
+    std::vector<std::vector<int>> neighbors(sg.nv + 1); // padded to use 1-based indexing
+    for (int u = 0; u < sg.nv; u++) {
+        for (int i = 0; i < sg.d[u]; i++) {
+            int v = sg.e[sg.v[u] + i];
+            neighbors[u + 1].push_back(v + 1); // Convert to 1-based indexing
+        }
+    }
+    return Graph(neighbors);
+}
+
+Graph nauty_decode_sparse(const std::string& encoded) {
+    sparsegraph sg;
+    char* encoded_cstr = new char[encoded.size() + 1];
+    strcpy(encoded_cstr, encoded.c_str());
+    stringtosparsegraph(encoded_cstr, &sg, NULL);
+    Graph graph1 = sparsegraph_to_Graph(sg);
+    free(sg.v);
+    free(sg.d);
+    free(sg.e);
+    delete[] encoded_cstr;
+    return graph1;
+}
+
+Graph nauty_decode(const std::string& encoded) {
+    if (encoded.find(">>graph6<<") == 0) {
+        return nauty_decode_dense(encoded.substr(10)); // Remove the ">>graph6<<" prefix
+    } else if (encoded.find(">>sparse6<<") == 0) {
+        return nauty_decode_sparse(encoded.substr(11)); // Remove the ">>sparse6<<" prefix
+    } else if (encoded[0] == ':') { // sparse6 always starts with ':'
+        return nauty_decode_sparse(encoded);
+    } else { // graph6 does not have a fixed prefix, but it cannot start with ':' since that is reserved for sparse6
+        return nauty_decode_dense(encoded);
+    }
 }
 
 bool Graph::operator==(const Graph& other) const {
@@ -216,81 +270,6 @@ std::string Graph::encode(const Permutation& automorphism, bool sparse) const {
         out += encode_dense_adjacency(cyclic_decomposition);
     }
     return out;
-}
-
-// Function documentation is above the forward declaration.
-int process_csv(const std::string& input, size_t position, char terminator, std::vector<int>* output) {
-    if (input[position] == terminator)
-        return position + 1; // No numbers to process
-    while (1) {
-        int value;
-        sscanf(input.c_str() + position, "%d", &value);
-        output->push_back(value);
-        size_t next_comma = input.find(",", position);
-        size_t next_terminator = input.find(terminator, position);
-        if (next_comma == std::string::npos) position = next_terminator + 1;
-        else position = std::min(next_comma, next_terminator) + 1;
-        if (position == next_terminator + 1) {
-            break; // We reached the end of the current set
-        }
-    }
-    return position;
-}
-
-/**
- * Computes the modulus of x, guaranteeing that the result is in the range [1, m].
- * @param x The integer to compute the modulus for.
- * @param m The modulus value.
- * @return The modulus of x in the range [1, m].
- */
-int mod_index_1(int x, int m) {
-    if (x % m == 0) {
-        return m;
-    } else {
-        // Works for both positive and negative x, since -7 % 5 = -2.
-        return ((x % m) + m) % m;
-    }
-}
-
-/**
- * Reads k bits from the string s starting at the position specified by pos,
- * where each character c represents the 6 bits if (c-63) and pos={a, b},
- * where 0 <= a < length(s) and 0 <= b < 6.
- * Function also modifies pos to point to the next character after the k bits.
- * @param s The string to read bits from.
- * @param pos A tuple containing the current position in the string and the bit position within the character.
- * @return The bits read from the string as an integer, or -1 if there are not enough bits left.
-*/
-int read_k_bits(const std::string& s, int k, std::tuple<int, int>& pos) {
-    int a = std::get<0>(pos);
-    int b = std::get<1>(pos);
-    int bits = 0;
-    int bits_read = 0;
-    while (bits_read < k) {
-        if (a >= (int) s.size()) {
-            return -1; // Not enough bits left
-        }
-        char c = s[a];
-        int c_value = c - 63; // Convert character to its value
-        int bits_to_read = k - bits_read;
-        if (bits_to_read >= 6 - b) {
-            // Read the remaining bits from the current character
-            bits_to_read = 6 - b;
-            int bits_mask = (1 << bits_to_read) - 1;
-            bits = (bits << bits_to_read) | (c_value & bits_mask);
-            bits_read += 6 - b;
-            a++; // Move to the next character
-            b = 0; // Reset bit position
-        } else {
-            // Read only part of the current character
-            int bits_mask = (1 << bits_to_read) - 1;
-            bits = (bits << bits_to_read) | ((c_value & (bits_mask << (6 - b - bits_to_read))) >> (6 - b - bits_to_read));
-            b += bits_to_read; // Update bit position
-            bits_read = k; // All bits read
-        }
-    }
-    pos = std::make_tuple(a, b);
-    return bits;
 }
 
 Graph decode(const std::string& encoded) {
@@ -473,4 +452,14 @@ sparsegraph Graph::to_sparsegraph() const {
     }
     assert(epos == sg.nde);
     return sg;
+}
+
+void Graph::to_densegraph(graph* g, int m_wordsize) const {
+    EMPTYGRAPH(g,m_wordsize,n());
+    for (int u = 1; u <= n(); u++) {
+        for (int v : neighbors()[u]) {
+            if (u <= v)
+                ADDONEEDGE(g, u-1, v-1, m_wordsize); // Convert to 0-based indexing
+        }
+    }
 }

@@ -46,3 +46,6 @@ public:
 private:
     std::vector<int> m_perm;
 };
+
+// Convert a string of the form "2,3,1" into a Permutation object representing the permutation that maps 1->2, 2->3, 3->1.
+Permutation parse_automorphism(const std::string& str);

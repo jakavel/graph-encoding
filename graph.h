@@ -72,6 +72,17 @@ public:
      * @return A sparsegraph representation of the graph.
      */
     sparsegraph to_sparsegraph() const;
+    /**
+     * Converts the graph to the graph type from gtools / nauty.
+     * @param g A pointer to a graph structure to fill with the graph data.
+     * @param m_wordsize The word size to use for the graph representation.
+     * Usage must be as follows:
+     *     DYNALLSTAT(graph,g,g_sz); // g is of type graph*
+     *     int m = SETWORDSNEEDED(n);
+     *     DYNALLOC2(graph,g,g_sz,m,n,"malloc");
+     *     graph1.to_densegraph(g, m); // graph1 is of type Graph
+     */
+    void to_densegraph(graph* g, int m_wordsize) const;
 
 private:
     std::vector<std::vector<int>> m_neighbors;
@@ -87,12 +98,24 @@ private:
  */
 Graph simple_decode(const std::string& str);
 /**
- * Decodes a automorphism based encoding string of the form "n:k:d/s:..." 
+ * Decodes a automorphism based encoding string of the form "::.*" into a Graph object.
  * into a Graph object.
  * @param str The string to decode.
  * @return A Graph object representing the decoded graph.
  */
 Graph decode(const std::string& str);
+/**
+ * Decodes a graph from a string in the format used by nauty's graph6 or sparse6 encoding,
+ * detected automatically.
+ * @param str The string to decode.
+ * @return A Graph object representing the decoded graph.
+ */
+Graph nauty_decode(const std::string& str);
+/**
+ * Convert a graph in either of nauty's formats to a Graph object.
+ */
+Graph graph_to_Graph(const graph& g, int m_wordsize, int n);
+Graph sparsegraph_to_Graph(const sparsegraph& sg);
 /**
  * Computes the cyclic decomposition of a permutation.
  * @param permutation A vector of integers representing the permutation.

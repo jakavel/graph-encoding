@@ -1,4 +1,5 @@
 #include "permutation.h"
+#include "helpers.h"
 #include <cassert>
 #include <algorithm>
 #include <string>
@@ -81,4 +82,10 @@ std::string Permutation::cyclic_decomposition_string() const {
         out += ")";
     }
     return out;
+}
+
+Permutation parse_automorphism(const std::string& str) {
+    std::vector<int> perm;
+    process_csv(str, 0, ',', &perm);
+    return Permutation(perm);
 }

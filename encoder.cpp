@@ -11,114 +11,172 @@
 #include <algorithm>
 #include <set>
 #include <gtools.h>
-using namespace std;
+#include "include/clipp.h"
 
-ifstream infile("CubicATAut.txt");
-FILE *s6_graphs_file;
+std::ifstream input_file;
+std::ifstream automorphisms_file;
+std::ofstream output_file;
 
-void print_neighbors(const vector<vector<int>>& neighbors) {
-    // prints the neighbors of the graph
-    for (int i = 1; i < (int)neighbors.size(); i++) {
-        cout << i << ": ";
-        vector<int> sorted_neighbors = neighbors[i];
-        sort(sorted_neighbors.begin(), sorted_neighbors.end());
-        for (int j = 0; j < (int)sorted_neighbors.size(); j++) {
-            cout << sorted_neighbors[j] << " ";
+void encode_file(const std::string& input_fname, const std::string& automorphisms_fname, const std::string& output_fname, bool progr) {
+    int codetype;
+    bool fswitch = false; // do not assume fixed length lines
+    long startline = 1; // first line (1-based)
+    char* input_fname_cstr = const_cast<char*>(input_fname.c_str());
+    FILE *infile = opengraphfile(input_fname_cstr, &codetype, fswitch, startline);
+    if (infile == NULL) {
+        std::cerr << "Error opening input file: " << input_fname << std::endl;
+        return;
+    }
+    automorphisms_file.open(automorphisms_fname);
+    if (!automorphisms_file.is_open()) {
+        std::cerr << "Error opening automorphisms file: " << automorphisms_fname << std::endl;
+        fclose(infile);
+        return;
+    }
+    output_file.open(output_fname);
+    if (!output_file.is_open()) {
+        std::cerr << "Error opening output file: " << output_fname << std::endl;
+        fclose(infile);
+        automorphisms_file.close();
+        return;
+    }
+    std::string automorphism_line;
+    if (codetype & GRAPH6) {
+        graph *g = NULL; // readg will allocate memory for g
+        int n, m_wordsize;
+        while ((g = readg(infile, g, 0, &m_wordsize, &n)) != NULL) {
+            Graph graphObj = graph_to_Graph(*g, m_wordsize, n);
+            if (!std::getline(automorphisms_file, automorphism_line)) {
+                std::cerr << "Error: Not enough lines in automorphisms file for the number of graphs in input file." << std::endl;
+                FREES(g);
+                fclose(infile);
+                automorphisms_file.close();
+                output_file.close();
+                return;
+            }
+            Permutation automorphism = parse_automorphism(automorphism_line);
+            // non-sparse encoding not implemented
+            output_file << graphObj.encode(automorphism, true) << std::endl;
         }
-        cout << endl;
+        FREES(g);
+    }
+    else if (codetype & SPARSE6) {
+        sparsegraph *sg = NULL;
+        while ((sg = read_sg(infile, sg)) != NULL) {
+            Graph graphObj = sparsegraph_to_Graph(*sg);
+            if (!std::getline(automorphisms_file, automorphism_line)) {
+                std::cerr << "Error: Not enough lines in automorphisms file for the number of graphs in input file." << std::endl;
+                free(sg->v);
+                free(sg->d);
+                free(sg->e);
+                fclose(infile);
+                automorphisms_file.close();
+                output_file.close();
+                return;
+            }
+            Permutation automorphism = parse_automorphism(automorphism_line);
+            output_file << graphObj.encode(automorphism, true) << std::endl;
+        }
+        free(sg->v);
+        free(sg->d);
+        free(sg->e);
+    }
+
+    fclose(infile);
+    output_file.close();
+    automorphisms_file.close();
+}
+
+void decode_file(const std::string& input_fname, const std::string& output_fname, bool sparse, bool progr) {
+    input_file.open(input_fname);
+    if (!input_file.is_open()) {
+        std::cerr << "Error opening input file: " << input_fname << std::endl;
+        return;
+    }
+    int input_graphs_count = 0;
+    std::string line;
+    if (progr) {
+        // Count the number of lines in the input file for progress tracking
+        while (std::getline(input_file, line)) {
+            ++input_graphs_count;
+        }
+        input_file.clear();
+        input_file.seekg(0, std::ios::beg);
+    }
+    FILE *out_graphs_file;
+    out_graphs_file = fopen(output_fname.c_str(), "w");
+    int progress = 0;
+    if (sparse) {
+        fprintf(out_graphs_file, ">>sparse6<<");
+        while (std::getline(input_file, line)) {
+            printf("\rDecoding graphs %d/%d\r", progress++, input_graphs_count);
+            Graph graphObj = decode(line);
+            sparsegraph s6_graph = graphObj.to_sparsegraph();
+            writes6_sg(out_graphs_file, &s6_graph);
+            free(s6_graph.v);
+            free(s6_graph.d);
+            free(s6_graph.e);
+        }
+        fclose(out_graphs_file);
+        printf("Decoding graphs %d/%d\n", progress, input_graphs_count);
+    }
+    else {
+        fprintf(out_graphs_file, ">>graph6<<");
+        DYNALLSTAT(graph,g,g_sz);
+        while (std::getline(input_file, line)) {
+            printf("\rDecoding graphs %d/%d\r", progress++, input_graphs_count);
+            Graph graphObj = decode(line);
+            int n = graphObj.n();
+            int m_wordsize = SETWORDSNEEDED(n);
+            DYNALLOC2(graph,g,g_sz,m_wordsize,n,"malloc");
+            graphObj.to_densegraph(g, m_wordsize);
+            writeg6(out_graphs_file, g, m_wordsize, n);
+        }
+        DYNFREE(g,g_sz);
+        fclose(out_graphs_file);
+        printf("Decoding graphs %d/%d\n", progress, input_graphs_count);
     }
 }
 
 int main(int argc, char *argv[]) {
-    string line;
-    if (!infile.is_open()) {
-        cerr << "Error opening CubicATAut.txt." << endl;
-        return 1;
-    }
-    s6_graphs_file = fopen("s6_graphs.csv", "w");
-    if (!s6_graphs_file) {
-        cerr << "Error opening s6_graphs.csv." << endl;
-        return 1;
-    }
-    ofstream outfile("enc_graphs.csv");
-    if (!outfile.is_open()) {
-        cerr << "Error opening enc_graphs.csv." << endl;
-        return 1;
-    }
-    int max_graph = 1000;
-    if (argc > 1) {
-        max_graph = atoi(argv[1]);
-        if (max_graph <= 0) {
-            cerr << "Invalid maximum graph number specified." << endl;
-            return 1;
+    enum class mode {encode, decode, help};
+    mode selected = mode::help;
+    std::string input_fname;
+    std::string automorphisms_fname;
+    std::string output_fname;
+    bool progr = false, sparse = true;
+
+    auto input_file = clipp::required("-i", "--input") & clipp::value("input_file", input_fname);
+    auto output_file = clipp::required("-o", "--output") & clipp::value("output_file", output_fname);
+
+    auto encodeMode = (
+        clipp::command("encode").set(selected,mode::encode),
+        input_file,
+        clipp::required("-a", "--automorphisms") & clipp::value("automorphisms_file", automorphisms_fname),
+        output_file,
+        clipp::option("--progress", "-p").set(progr) % "show progress" );
+
+    auto decodeMode = (
+        clipp::command("decode").set(selected,mode::decode),
+        input_file,
+        output_file,
+        ( clipp::option("-s", "-sparse"  ).set(sparse,true) |
+        clipp::option("-d", "-dense" ).set(sparse,false) ) % "Output format is sparse6 / graph6",
+        clipp::option("-p", "--progress").set(progr) % "show progress" );
+
+    auto cli = (
+        (encodeMode | decodeMode | clipp::command("help").set(selected,mode::help) ),
+        clipp::option("-v", "--version").call([]{std::cout << "version 0.1\n\n";}).doc("show version")  );
+
+    if(clipp::parse(argc, argv, cli)) {
+        switch(selected) {
+            case mode::encode: encode_file(input_fname, automorphisms_fname, output_fname, progr); break;
+            case mode::decode: decode_file(input_fname, output_fname, sparse, progr); break;
+            case mode::help: std::cout << clipp::make_man_page(cli, "encoder"); break;
         }
+    } else {
+        std::cout << clipp::usage_lines(cli, "encoder") << '\n';
     }
-    for (int graph_i = 0; graph_i <= max_graph; graph_i++) {
-        if (!getline(infile, line)) {
-            cout << "End of file reached, read " << graph_i << " graphs" << endl;
-            break; // end of file
-        }
-        int n, n_index, n_of_automorphisms;
-        sscanf(line.c_str(), "%d,%d,%d", &n, &n_index, &n_of_automorphisms);
-
-        getline(infile, line);
-        int n2; sscanf(line.c_str(), "%d", &n2);
-        assert(n == n2);
-        Graph graph = simple_decode(line);
-
-        vector<Permutation> automorphisms;
-        automorphisms.reserve(n_of_automorphisms);
-        for (int i = 0; i < n_of_automorphisms; i++) {
-            getline(infile, line);
-            replace(line.begin(), line.end(), ',', ' ');
-            istringstream iss(line);
-            vector<int> perm;
-            for (int j = 0; j < n; j++) {
-                int x;
-                iss >> x;
-                perm.push_back(x);
-            }
-            automorphisms.push_back(Permutation(perm));
-        }
-
-        outfile << graph.n() << "," << graph.encode(automorphisms[0], true) << endl;
-        /* for (const Permutation& automorphism : automorphisms) {
-            vector<int> isomorphism;
-            isomorphism.reserve(n);
-            for (vector<int>& cycle : automorphism.cyclic_decomposition()) {
-                isomorphism.insert(isomorphism.end(), cycle.begin(), cycle.end());
-            }
-            Permutation isomorphism_perm(isomorphism);
-            Graph new_graph = decode(graph.encode(automorphism, true));
-            new_graph.apply_morphism(isomorphism_perm);
-            if (graph != new_graph) {
-                cout << "Graph mismatch with sparse encoding!" << endl;
-                cout << "Graph neighbors:" << endl;
-                cout << "n=" << graph.n() << ", automorphism=" << automorphism.cyclic_decomposition_string() << endl;
-                cout << "Original graph neighbors:" << endl;
-                print_neighbors(graph.neighbors());
-                cout << "New graph neighbors:" << endl;
-                print_neighbors(new_graph.neighbors());
-                return 1;
-            }
-            assert(graph == new_graph);
-            outfile << graph.n() << "," << graph.encode(automorphism, true) << endl;
-            sparsegraph s6_graph = graph.to_sparsegraph();
-            fprintf(s6_graphs_file, "%d,", s6_graph.nv);
-            writes6_sg(s6_graphs_file, &s6_graph);
-            free(s6_graph.v);
-            free(s6_graph.d);
-            free(s6_graph.e);
-
-        } */
-        if (graph_i % 100 == 0 && graph_i > 0) {
-            cout << "Processed graph " << graph_i  << endl;
-        }
-    }
-
-    outfile.close();
-    infile.close();
-    fclose(s6_graphs_file);
-    cout << "All graphs processed successfully." << endl;
+    
     return 0;
 }
