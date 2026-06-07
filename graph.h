@@ -47,6 +47,13 @@ public:
     }
 
     /**
+     * Checks if two graphs are isomorphic.
+     * @param other The other graph to compare against.
+     * @return True if the graphs are isomorphic, false otherwise.
+     */
+    bool is_isomorphic(const Graph& other) const;
+
+    /**
      * Encodes the graph as a string.
      * @return A string representation of the graph in the form
      *         "n:n_11,n_12,...;n_21,n_22,...;..."
@@ -67,6 +74,12 @@ public:
      *                 The i-th element of the vector is the new index for the i-th node.
      */
     void apply_morphism(const Permutation& morphism);
+    /**
+     * Checks if the given permutation is an automorphism of the graph.
+     * @param morphism A vector of integers representing the permutation to check.
+     * @return True if the permutation is an automorphism of the graph, false otherwise.
+     */
+    bool is_automorphism(const Permutation& morphism) const;
     /**
      * Converts the graph to the sparsegraph type from gtools / nauty.
      * @return A sparsegraph representation of the graph.

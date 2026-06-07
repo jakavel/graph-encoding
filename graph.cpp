@@ -433,6 +433,36 @@ void Graph::apply_morphism(const Permutation& morphism) {
     }
 }
 
+bool Graph::is_automorphism(const Permutation& morphism) const {
+    Graph copy = *this;
+    copy.apply_morphism(morphism);
+    return copy == *this;
+}
+
+bool Graph::is_isomorphic(const Graph& other) const {
+    if (n() != other.n()) return false;
+    if (m() != other.m()) return false;
+    sparsegraph sg1 = to_sparsegraph();
+    sparsegraph sg2 = other.to_sparsegraph();
+    DYNALLSTAT(int,lab1,lab1_sz);
+    DYNALLSTAT(int,lab2,lab2_sz);
+    DYNALLSTAT(int,ptn,ptn_sz);
+    DYNALLSTAT(int,orbits,orbits_sz);
+    static DEFAULTOPTIONS_SPARSEGRAPH(options);
+    statsblk stats;
+    SG_DECL(cg1); SG_DECL(cg2);
+    options.getcanon = TRUE;
+    int m_wordsize = SETWORDSNEEDED(n());
+    nauty_check(WORDSIZE,m_wordsize,n(),NAUTYVERSIONID);
+    DYNALLOC1(int,lab1,lab1_sz,n(),"malloc");
+    DYNALLOC1(int,lab2,lab2_sz,n(),"malloc");
+    DYNALLOC1(int,ptn,ptn_sz,n(),"malloc");
+    DYNALLOC1(int,orbits,orbits_sz,n(),"malloc");
+    sparsenauty(&sg1,lab1,ptn,orbits,&options,&stats,&cg1);
+    sparsenauty(&sg2,lab2,ptn,orbits,&options,&stats,&cg2);
+    return aresame_sg(&cg1,&cg2);
+}
+
 sparsegraph Graph::to_sparsegraph() const {
     sparsegraph sg;
     sg.nv = n();
