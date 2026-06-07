@@ -40,9 +40,14 @@
 # debug information files
 *.dwo
 
-CubicATsemiregAut.txt
-CubicATAutsmall.txt
-CubicATAut.txt
+# Graph encoding related files
+*.txt
+*.ssg
+*.g6
+*.s6
+*.csv
+*.pdf
+*.aut
 .vscode
 symencode
 include/nauty/
