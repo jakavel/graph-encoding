@@ -86,6 +86,6 @@ std::string Permutation::cyclic_decomposition_string() const {
 
 Permutation parse_automorphism(const std::string& str) {
     std::vector<int> perm;
-    process_csv(str, 0, ',', &perm);
+    process_csv(str, 0, (char)0, &perm);
     return Permutation(perm);
 }

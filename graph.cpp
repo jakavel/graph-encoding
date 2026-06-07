@@ -46,11 +46,12 @@ Graph simple_decode(const std::string& encoded) {
     return Graph(neighbors);
 }
 
-Graph graph_to_Graph(const graph& g, int m_wordsize, int n) {
+Graph graph_to_Graph(const graph* g, int m_wordsize, int n) {
     std::vector<std::vector<int>> neighbors(n + 1); // padded to use 1-based indexing
     for (int u = 0; u < n; u++) {
         for (int v = u; v < n; v++) {
-            if (ISELEMENT(GRAPHROW(g, u, m_wordsize), v)) {
+            set *gv = GRAPHROW(g, u, m_wordsize);
+            if (ISELEMENT(gv, v)) {
                 neighbors[u + 1].push_back(v + 1); // Convert to 1-based indexing
                 if (u != v) {
                     neighbors[v + 1].push_back(u + 1);
@@ -69,7 +70,7 @@ Graph nauty_decode_dense(const std::string& encoded) {
     int m = SETWORDSNEEDED(n);
     DYNALLOC2(graph,g,g_sz,m,n,"malloc");
     stringtograph(encoded_cstr, g, m);
-    Graph graph1 = graph_to_Graph(*g, m, n);
+    Graph graph1 = graph_to_Graph(g, m, n);
     DYNFREE(g, g_sz);
     delete[] encoded_cstr;
     return graph1;
@@ -273,9 +274,10 @@ std::string Graph::encode(const Permutation& automorphism, bool sparse) const {
 }
 
 Graph decode(const std::string& encoded) {
-    assert(encoded.find("::") == 0); // The encoded string must start with "::"
+
+    assert(encoded.find("::") == 0 || encoded.find(">>ssg<<") == 0); // The encoded string must start with "::" or ">>ssg<<"
     int n; // n = number of vertices
-    int s_pos = 2; // string (encoded) position
+    int s_pos = 2 + encoded.find("::"); // string (encoded) position
     if (encoded[s_pos] == 126 && encoded[s_pos + 1] == 126) {
         n = ((encoded[s_pos + 2] - 63) << 30) +
             ((encoded[s_pos + 3] - 63) << 24) +
@@ -408,6 +410,7 @@ Graph decode(const std::string& encoded) {
 }
 
 void Graph::apply_morphism(const Permutation& morphism) {
+    assert(morphism.n() == n());
     Permutation inv_morphism = morphism.inverse();
     std::set<int> visited;
     // Permute the outer vector of the neighbors list according to the morphism.

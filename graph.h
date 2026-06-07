@@ -114,7 +114,7 @@ Graph nauty_decode(const std::string& str);
 /**
  * Convert a graph in either of nauty's formats to a Graph object.
  */
-Graph graph_to_Graph(const graph& g, int m_wordsize, int n);
+Graph graph_to_Graph(const graph* g, int m_wordsize, int n);
 Graph sparsegraph_to_Graph(const sparsegraph& sg);
 /**
  * Computes the cyclic decomposition of a permutation.

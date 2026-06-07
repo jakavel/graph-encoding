@@ -40,25 +40,22 @@ void encode_file(const std::string& input_fname, const std::string& automorphism
         automorphisms_file.close();
         return;
     }
+    output_file << ">>ssg<<"; // Custom prefix to indicate our encoding format
     std::string automorphism_line;
     if (codetype & GRAPH6) {
         graph *g = NULL; // readg will allocate memory for g
         int n, m_wordsize;
-        while ((g = readg(infile, g, 0, &m_wordsize, &n)) != NULL) {
-            Graph graphObj = graph_to_Graph(*g, m_wordsize, n);
+        while ((g = readg(infile, NULL, 0, &m_wordsize, &n)) != NULL) {
+            Graph graphObj = graph_to_Graph(g, m_wordsize, n);
             if (!std::getline(automorphisms_file, automorphism_line)) {
                 std::cerr << "Error: Not enough lines in automorphisms file for the number of graphs in input file." << std::endl;
-                FREES(g);
-                fclose(infile);
-                automorphisms_file.close();
-                output_file.close();
-                return;
+                break;
             }
             Permutation automorphism = parse_automorphism(automorphism_line);
             // non-sparse encoding not implemented
             output_file << graphObj.encode(automorphism, true) << std::endl;
+            FREES(g);
         }
-        FREES(g);
     }
     else if (codetype & SPARSE6) {
         sparsegraph *sg = NULL;
@@ -66,20 +63,15 @@ void encode_file(const std::string& input_fname, const std::string& automorphism
             Graph graphObj = sparsegraph_to_Graph(*sg);
             if (!std::getline(automorphisms_file, automorphism_line)) {
                 std::cerr << "Error: Not enough lines in automorphisms file for the number of graphs in input file." << std::endl;
-                free(sg->v);
-                free(sg->d);
-                free(sg->e);
-                fclose(infile);
-                automorphisms_file.close();
-                output_file.close();
-                return;
+                break;
             }
             Permutation automorphism = parse_automorphism(automorphism_line);
+            if (graphObj.is_automorphism(automorphism) == false) {
+                std::cerr << "Error: Automorphism does not preserve the graph structure." << std::endl;
+                break;
+            }
             output_file << graphObj.encode(automorphism, true) << std::endl;
         }
-        free(sg->v);
-        free(sg->d);
-        free(sg->e);
     }
 
     fclose(infile);
